@@ -1,129 +1,79 @@
 from .models import Post
+from rest_framework.decorators import authentication_classes,permission_classes 
 from .serializers import PostSerializer
-from rest_framework.renderers import JSONRenderer
-from django.http import HttpResponse,JsonResponse
-from django.shortcuts import render
-import io
-from rest_framework.parsers import JSONParser
-from django.http import HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from django.views import View
+from rest_framework.generics import GenericAPIView
+from rest_framework.mixins import ListModelMixin,CreateModelMixin,RetrieveModelMixin,UpdateModelMixin,DestroyModelMixin
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import IsAuthenticated
+from .cpp import MyPermission
 
-@method_decorator(csrf_exempt,name='dispatch')
-class PostAPI(View):
-    def get(self,request,*args,**kwargs):
-        json_data=request.body
-        stream=io.BytesIO(json_data)
-        pythondata=JSONParser().parse(stream)
-        id=pythondata.get('id',None)
-        if id is not None:
-            stu=Post.objects.get(id=id)
-            serializer=PostSerializer(stu)
-            json_data=JSONRenderer().render(serializer.data)
-            return HttpResponse(json_data,content_type='application/json')
-        stu=Post.objects.all()
-        serializer=PostSerializer(stu,many=True)
-        json_data=JSONRenderer().render(serializer.data)
-        return HttpResponse(json_data,content_type='application/json')
-        
+class LCPostAPI(GenericAPIView,ListModelMixin,CreateModelMixin):
 
+    queryset=Post.objects.all()
+    serializer_class=PostSerializer
+    authentication_classes=[SessionAuthentication]
+    permission_classes=[MyPermission]
 
-    def post(self,request,*args,**kwargs):
-        json_data=request.body
-        stream=io.BytesIO(json_data)
-        pythondata=JSONParser().parse(stream)
-        serializer=PostSerializer(data=pythondata)
-        if serializer.is_valid():
-            serializer.save()
-            res={'msg':'Data Created'}
-            json_data=JSONRenderer().render(res)
-            return HttpResponse(json_data,content_type='application/json')
-        json_data=JSONRenderer().render(serializer.errors)
-        return HttpResponse(json_data,content_type='application/json')
-
-
-    def put(self,request,*args,**kwargs):
-        json_data=request.body
-        stream=io.BytesIO(json_data)
-        pythondata=JSONParser().parse(stream)
-        id=pythondata.get('id',None)
-        stu=Post.objects.get(id=id)
-        serializer=PostSerializer(stu,data=pythondata,partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            res={'msg':'Data Updated'}
-            json_data=JSONRenderer().render(res)
-            return HttpResponse(json_data,content_type='application/json')
-        json_data=JSONRenderer().render(serializer.errors)
-        return HttpResponse(json_data,content_type='application/json')
-
-
-    def delete(self,request,*args,**kwargs):
-        json_data=request.body
-        stream=io.BytesIO(json_data)
-        pythondata=JSONParser().parse(stream)
-        id=pythondata.get('id',None)
-        stu=Post.objects.get(id=id)
-        stu.delete()
-        res={'msg':'Data Deleted'}
-        # json_data=JSONRenderer().render(res)
-        # return HttpResponse(json_data,content_type='application/json')
-        return JsonResponse(res,safe=False)
-
-# @csrf_exempt
-# def PostList(request):
-#     if request.method =='GET':
-#         json_data=request.body
-#         stream=io.BytesIO(json_data)
-#         pythondata=JSONParser().parse(stream)
-#         id=pythondata.get('id',None)
-#         if id is not None:
-#             stu=Post.objects.get(id=id)
-#             serializer=PostSerializer(stu)
-#             json_data=JSONRenderer().render(serializer.data)
-#             return HttpResponse(json_data,content_type='application/json')
-#         stu=Post.objects.all()
-#         serializer=PostSerializer(stu,many=True)
-#         json_data=JSONRenderer().render(serializer.data)
-#         return HttpResponse(json_data,content_type='application/json')
-
-#     if request.method =='POST':
-#         json_data=request.body
-#         stream=io.BytesIO(json_data)
-#         pythondata=JSONParser().parse(stream)
-#         serializer=PostSerializer(data=pythondata)
-#         if serializer.is_valid():
-#             serializer.save()
-#             res={'msg':'Data Created'}
-#             json_data=JSONRenderer().render(res)
-#             return HttpResponse(json_data,content_type='application/json')
-#         json_data=JSONRenderer().render(serializer.errors)
-#         return HttpResponse(json_data,content_type='application/json')
+    def get(self, request, *args, **kwargs):
+        return self.list(request,*args,**kwargs)
     
-#     if request.method =='PUT':
-#         json_data=request.body
-#         stream=io.BytesIO(json_data)
-#         pythondata=JSONParser().parse(stream)
-#         id=pythondata.get('id',None)
-#         stu=Post.objects.get(id=id)
-#         serializer=PostSerializer(stu,data=pythondata,partial=True)
-#         if serializer.is_valid():
-#             serializer.save()
-#             res={'msg':'Data Updated'}
-#             json_data=JSONRenderer().render(res)
-#             return HttpResponse(json_data,content_type='application/json')
-#         json_data=JSONRenderer().render(serializer.errors)
-#         return HttpResponse(json_data,content_type='application/json')
+    def post(self, request, *args, **kwargs):
+        return self.create(request,*args,**kwargs)
     
-#     if request.method =='DELETE':
-#         json_data=request.body
-#         stream=io.BytesIO(json_data)
-#         pythondata=JSONParser().parse(stream)
-#         id=pythondata.get('id',None)
-#         stu=Post.objects.get(id=id)
-#         stu.delete()
-#         res={'msg':'Data Deleted'}
-#         # json_data=JSONRenderer().render(res)
-#         # return HttpResponse(json_data,content_type='application/json')
-#         return JsonResponse(res,safe=False)
+
+#RUD
+class RUDPostAPI(GenericAPIView,RetrieveModelMixin,UpdateModelMixin,DestroyModelMixin):
+    queryset=Post.objects.all()
+    serializer_class=PostSerializer
+
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request,*args,**kwargs)
+    
+    def put(self, request, *args, **kwargs):
+        return self.update(request,*args,**kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request,*args,**kwargs)
+
+
+
+# class PostList(GenericAPIView,ListModelMixin):
+#     queryset=Post.objects.all()
+#     serializer_class=PostSerializer
+
+#     def get(self, request, *args, **kwargs):
+#         return self.list(request,*args,**kwargs)
+    
+
+# #Create
+# class PostCreate(GenericAPIView,CreateModelMixin):
+#     queryset=Post.objects.all()
+#     serializer_class=PostSerializer
+
+#     def post(self, request, *args, **kwargs):
+#         return self.create(request,*args,**kwargs)
+    
+# #Retriv
+# class PostRetrive(GenericAPIView,RetrieveModelMixin):
+#     queryset=Post.objects.all()
+#     serializer_class=PostSerializer
+
+#     def get(self, request, *args, **kwargs):
+#         return self.retrieve(request,*args,**kwargs)
+    
+# #Update
+# class PostUpdate(GenericAPIView,UpdateModelMixin):
+#     queryset=Post.objects.all()
+#     serializer_class=PostSerializer
+
+#     def put(self, request, *args, **kwargs):
+#         return self.update(request,*args,**kwargs)
+    
+
+# #Distroy
+# class PostDestroy(GenericAPIView,DestroyModelMixin):
+#     queryset=Post.objects.all()
+#     serializer_class=PostSerializer
+
+#     def delete(self, request, *args, **kwargs):
+#         return self.destroy(request,*args,**kwargs)
